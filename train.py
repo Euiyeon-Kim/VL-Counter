@@ -153,7 +153,7 @@ def train(args, trainer):
                     if step % args.save_latest_freq == 0:
                         path = os.path.join(args.log_dir, 'latest.pth')
                         trainer.save_model(path, cur_epoch, step, best_mae, save_optim=True)
-
+            
             if local_rank == 0:
                 print(f"Training epoch {cur_epoch} Done")
                 if (cur_epoch + 1) % args.valid_freq_epoch == 0:

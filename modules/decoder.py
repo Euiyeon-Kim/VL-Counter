@@ -8,9 +8,9 @@ class DensityX16(nn.Module):
     # Modified from SAFECount  https://github.com/zhiyuanyou/SAFECount
     def __init__(self, in_dim):
         super().__init__()
-        # self.visual_encoder = Encoder()
+        self.visual_encoder = Encoder()
         self.regressor = nn.Sequential(
-            nn.Conv2d(in_dim, 196, 7, padding=3),
+            nn.Conv2d(in_dim+96, 196, 7, padding=3),
             nn.PReLU(196),
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(196, 128, 5, padding=2),
@@ -26,8 +26,8 @@ class DensityX16(nn.Module):
         )
         self._weight_init_()
 
-    def forward(self, img_feat, sim_map):
-        # img_feat = self.visual_encoder(img)
+    def forward(self, img, sim_map):
+        img_feat = self.visual_encoder(img)
         density = self.regressor(torch.cat((sim_map, img_feat), dim=1))
         return density
 

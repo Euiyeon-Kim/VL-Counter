@@ -18,7 +18,7 @@ class CLIPMatMulCNNv1(BaseModel):
             nn.GELU(),
             nn.Linear(args.txt_emb_dim, args.txt_emb_dim),
         )
-        self.decoder = DensityX16(in_dim=1+512)
+        self.decoder = DensityX16(in_dim=1)
         self.mse_loss = nn.MSELoss(reduction='mean')
 
     def get_log_dict(self):
@@ -39,12 +39,12 @@ class CLIPMatMulCNNv1(BaseModel):
         # Encode image
         B, _, H, W = imgs.size()
         npH, npW = H // self.args.patch_size, W // self.args.patch_size
-        cls_token, features = self.img_backbone(imgs)[-1]
+        cls_token, features = self.img_backbone(imgs)[-1]   # [B, 1, 512], [B, 1024, 512]
 
-        descriptor = self.enhancer(torch.cat((txt_embeddings, cls_token), dim=-1))
+        descriptor = self.enhancer(torch.cat((txt_embeddings, cls_token), dim=-1))  # [B, 512]
         similarity = torch.matmul(features, descriptor.unsqueeze(-1)).reshape(B, npH, npW, 1).permute(0, 3, 1, 2)
-        features = features.reshape(B, npH, npW, -1).permute(0, 3, 1, 2)
-        pred_density = self.decoder(features, similarity)
+        # features = features.reshape(B, npH, npW, -1).permute(0, 3, 1, 2)
+        pred_density = self.decoder(imgs, similarity)
 
         if set_img_dict:
             self.img_dict = {

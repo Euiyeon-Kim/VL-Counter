@@ -62,14 +62,19 @@ class FSC147(Dataset):
         return self.n_samples
 
     def augment(self, img, density):
-        # Resize
         resized_image = transforms.Resize((self.input_resolution, self.input_resolution),
-                                          interpolation=transforms.InterpolationMode.BICUBIC)(img)
+                                interpolation=transforms.InterpolationMode.BICUBIC)(img)
         resized_density = cv2.resize(density, (self.input_resolution, self.input_resolution))
         orig_count = np.sum(density)
         new_count = np.sum(resized_density)
         if new_count > 0:
             resized_density = resized_density * (orig_count / new_count)
+
+        # Gaussian noise
+        resized_image = TTensor(resized_image)
+        if self.mode != 'train':
+            resized_density = resized_density * self.density_scale
+            return resized_image, resized_density, new_count
 
         # Augmentation probability
         aug_p = random.random()
@@ -78,13 +83,11 @@ class FSC147(Dataset):
             aug_flag = 1
             if aug_p < 0.25:  # 0.25
                 aug_flag = 0
-
-        # Gaussian noise
-        resized_image = TTensor(resized_image)
+                
         if aug_flag == 1:
             noise = np.random.normal(0, 0.1, resized_image.size())
             noise = torch.from_numpy(noise)
-            re_image = resized_image + noise
+            resized_image = resized_image + noise
             resized_image = torch.clamp(resized_image, 0, 1)
 
         # Color jitter and Gaussian blur
@@ -114,8 +117,8 @@ class FSC147(Dataset):
 
         img, gt, count = self.augment(img, gt)
 
-        img = self.img_transform(img)
-        gt = torch.from_numpy(gt).unsqueeze(0)
+        img = self.img_transform(img).float()
+        gt = torch.from_numpy(gt).float().unsqueeze(0)
 
         return {
             'class_name': cur_class,

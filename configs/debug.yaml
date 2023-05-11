@@ -45,7 +45,7 @@ warm_up_iter: 0
 last_lr_decay_iter: 20000
 
 # Logging
-img_summary_freq: 50
-metric_summary_freq: 100
+img_summary_freq: 10
+metric_summary_freq: 10
 save_latest_freq: 500
 save_every_freq_epoch: 25
