@@ -1,6 +1,6 @@
 NUM_GPUS=1
-CHECKPOINT_DIR=debug
-CONFIG_NAME=debug.yaml
+CHECKPOINT_DIR=CLIPViTMatmul/simViTFeatCNN
+CONFIG_NAME=CLIPMatMulCNN.yaml
 
 mkdir -p exps/${CHECKPOINT_DIR} && \
 python -m torch.distributed.launch --use_env \

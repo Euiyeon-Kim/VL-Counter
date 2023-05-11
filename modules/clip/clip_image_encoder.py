@@ -73,7 +73,7 @@ class CLIPVisionEncoder(nn.Module):
              x], dim=1)  # shape = [*, grid ** 2 + 1, width]
 
         pos = self.positional_embedding.to(x.dtype)
-        cls_pos = pos[0, :] + self.class_embedding.to(x.dtype)
+        cls_pos = pos[0, :] 
         spatial_pos = F.interpolate(pos[1:, ].reshape(1, self.spatial_size, self.spatial_size, C).permute(0, 3, 1, 2),
                                     size=(H, W), mode='bilinear', align_corners=False)
         spatial_pos = spatial_pos.reshape(1, C, H * W).permute(0, 2, 1)

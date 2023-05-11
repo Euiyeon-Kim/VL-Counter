@@ -17,6 +17,7 @@ import models
 from utils.logger import Logger
 from utils.scheduler import get_lr
 from utils.env import get_options, prepare_env
+from evaluate import validate_fsc384
 
 
 class Trainer:
@@ -70,6 +71,10 @@ class Trainer:
         self.optimizer.step()
 
         return log_dict
+
+    @torch.no_grad()    
+    def validate_fsc384(self, set_img_dict=True):
+        return validate_fsc384(self.args, self.model, return_visual=set_img_dict)
 
     def save_model(self, path, epoch, step, best, save_optim=False):
         chkpt = {

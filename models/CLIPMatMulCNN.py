@@ -18,7 +18,7 @@ class CLIPMatMulCNNv1(BaseModel):
             nn.GELU(),
             nn.Linear(args.txt_emb_dim, args.txt_emb_dim),
         )
-        self.decoder = DensityX16(in_dim=1)
+        self.decoder = DensityX16(in_dim=1+512)
         self.mse_loss = nn.MSELoss(reduction='mean')
 
     def get_log_dict(self):
@@ -29,8 +29,8 @@ class CLIPMatMulCNNv1(BaseModel):
         return {'pred': torch.from_numpy(img).permute(2, 0, 1) / 255.}
 
     def inference(self, img, class_name):
-        density, _ = self.predict(img, class_name)
-        return density
+        density, similarity = self.predict(img, class_name)
+        return density, similarity
 
     def predict(self, imgs, class_names, set_img_dict=False):
         # Encode txt
@@ -42,14 +42,9 @@ class CLIPMatMulCNNv1(BaseModel):
         cls_token, features = self.img_backbone(imgs)[-1]
 
         descriptor = self.enhancer(torch.cat((txt_embeddings, cls_token), dim=-1))
-        print(torch.max(features), torch.min(features), features.shape)
-        features = features / features.norm(dim=-1, keepdim=True)
-        print(torch.max(features), torch.min(features))
-        print(features.shape, descriptor.shape)
-        exit()
         similarity = torch.matmul(features, descriptor.unsqueeze(-1)).reshape(B, npH, npW, 1).permute(0, 3, 1, 2)
-
-        pred_density = self.decoder(imgs, similarity)
+        features = features.reshape(B, npH, npW, -1).permute(0, 3, 1, 2)
+        pred_density = self.decoder(features, similarity)
 
         if set_img_dict:
             self.img_dict = {
