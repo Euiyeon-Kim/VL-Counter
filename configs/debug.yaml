@@ -1,0 +1,51 @@
+seed: 765
+
+model: CLIPMatMulCNNv1
+
+# Backbone - CLIP arch
+clip_path: pretrained/ViT-B-16.pt
+# CLIP Text
+txt_emb_dim: 512
+# CLIP Vision
+out_indices: null
+input_resolution: 512
+patch_size: 16
+img_emb_dim: 768
+drop_path_rate: 0.1
+
+# Train
+total_epochs: 500
+batch_size: 2
+num_workers: 4
+valid_freq_epoch: 5
+
+# Backbone - train
+fix_txt_encoder: True
+fix_img_encoder: False
+
+# Data
+density_scale: 60
+data_name: FSC147
+data_root: datasets/FSC147_384_V2
+img_norm_mean:
+  - 0.48145466
+  - 0.4578275
+  - 0.40821073
+img_norm_var:
+  - 0.26862954
+  - 0.26130258
+  - 0.27577711
+
+# Optimizer
+weight_decay: 1.0e-4
+backbone_lr: 1.0e-6
+start_lr: 1.0e-5
+end_lr: 1.0e-6
+warm_up_iter: 2000
+last_lr_decay_iter: 20000
+
+# Logging
+img_summary_freq: 10
+metric_summary_freq: 10
+save_latest_freq: 500
+save_every_freq_epoch: 25
