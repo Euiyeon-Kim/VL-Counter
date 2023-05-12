@@ -74,7 +74,7 @@ class Trainer:
 
     @torch.no_grad()    
     def validate_fsc384(self, set_img_dict=True):
-        return validate_fsc384(self.args, self.model, return_visual=set_img_dict)
+        return validate_fsc384(self.args, self.model_without_ddp, return_visual=set_img_dict)
 
     def save_model(self, path, epoch, step, best, save_optim=False):
         chkpt = {
@@ -153,7 +153,7 @@ def train(args, trainer):
                     if step % args.save_latest_freq == 0:
                         path = os.path.join(args.log_dir, 'latest.pth')
                         trainer.save_model(path, cur_epoch, step, best_mae, save_optim=True)
-            
+
             if local_rank == 0:
                 print(f"Training epoch {cur_epoch} Done")
                 if (cur_epoch + 1) % args.valid_freq_epoch == 0:

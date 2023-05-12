@@ -1,2 +1,2 @@
 from .BaseModel import BaseModel
-from .CLIPMatMulCNN import CLIPMatMulCNNv1
+from .CLIPMatMulCNN import CLIPMatMulCNNv1, CLIPMatMulCNNv2

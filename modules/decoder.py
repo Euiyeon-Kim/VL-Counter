@@ -5,12 +5,10 @@ from .small_encoder import Encoder
 
 
 class DensityX16(nn.Module):
-    # Modified from SAFECount  https://github.com/zhiyuanyou/SAFECount
     def __init__(self, in_dim):
-        super().__init__()
-        self.visual_encoder = Encoder()
+        super(DensityX16, self).__init__()
         self.regressor = nn.Sequential(
-            nn.Conv2d(in_dim+96, 196, 7, padding=3),
+            nn.Conv2d(in_dim, 196, 7, padding=3),
             nn.PReLU(196),
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(196, 128, 5, padding=2),
@@ -23,13 +21,9 @@ class DensityX16(nn.Module):
             nn.PReLU(32),
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(32, 1, 1),
+            nn.ReLU(32)
         )
         self._weight_init_()
-
-    def forward(self, img, sim_map):
-        img_feat = self.visual_encoder(img)
-        density = self.regressor(torch.cat((sim_map, img_feat), dim=1))
-        return density
 
     def _weight_init_(self):
         for m in self.modules():
@@ -40,3 +34,18 @@ class DensityX16(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
+
+    def forward(self, x):
+        return self.regressor(x)
+
+
+class CNNDecoderwCNNFeat(nn.Module):
+    def __init__(self, in_dim):
+        super().__init__()
+        self.visual_encoder = Encoder()
+        self.density_regressor = DensityX16(in_dim=in_dim + 96)
+
+    def forward(self, img, sim_map):
+        img_feat = self.visual_encoder(img)
+        density = self.density_regressor(torch.cat((sim_map, img_feat), dim=1))
+        return density

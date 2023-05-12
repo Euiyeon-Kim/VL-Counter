@@ -25,7 +25,7 @@ def validate_fsc384(args, model, batch_size=8, return_visual=True):
         img = batch['img'].cuda()
         class_name = batch['class_name']
         gt_cnt = batch['count'].cuda()
-        pred, similarity = model.module.inference(img, class_name)
+        pred = model.inference(img, class_name, set_img_dict=return_visual)
 
         pred_cnt = torch.sum(pred, dim=(1, 2, 3)) / args.density_scale
         cnt_err = abs(pred_cnt - gt_cnt)
@@ -33,9 +33,11 @@ def validate_fsc384(args, model, batch_size=8, return_visual=True):
         rmse += torch.sum(cnt_err**2).item()
 
     if return_visual:
-        denormed = denormalize(img[0].unsqueeze(0), args.img_norm_mean, args.img_norm_var)
-        img = save_density_map_w_similarity(denormed, pred[0], similarity[0], batch['gt'][0], gt_cnt[0], batch['class_name'][0], args.density_scale)
-
+        log_img_dict = model.img_dict
+        denormed = denormalize(log_img_dict['img'].unsqueeze(0), args.img_norm_mean, args.img_norm_var)
+        img = save_density_map_w_similarity(denormed, log_img_dict['pred'], log_img_dict['sim'],
+                                            log_img_dict['origin_sim'], batch['gt'][0], gt_cnt[0],
+                                            class_name[0], args.density_scale)
         img_dict = {'val/fsc_pred': torch.from_numpy(img).permute(2, 0, 1) / 255.}
 
     mae = mae / len(val_dataset)
@@ -46,27 +48,6 @@ def validate_fsc384(args, model, batch_size=8, return_visual=True):
         'val/fsc_rmse': rmse,
     }, img_dict
 
-
-@torch.no_grad()
-def save_fsc384_results(args, model, save_dir):
-    model.eval()
-    os.makedirs(save_dir, exist_ok=True)
-    val_dataset = data.FSC147(args, mode='val')
-    val_dataloader = DataLoader(val_dataset, batch_size=1, num_workers=8,
-                                pin_memory=True, shuffle=True, drop_last=False)
-    print('Number of validation images: %d' % len(val_dataset))
-
-    for idx, batch in enumerate(tqdm(val_dataloader)):
-        img = batch['img'].cuda()
-        txt = batch['txt'].cuda()
-        gt_cnt = batch['count'].cuda()
-        pred = model.inference(img, txt)
-
-        denormed = denormalize(img, args.img_norm_mean, args.img_norm_var)
-        img = save_density_map(denormed, pred[0], batch['gt'][0],
-                               gt_cnt[0], batch['class_name'][0])
-        Image.fromarray(img).save(f'{save_dir}/{idx}_{batch["class_name"][0]}.png')
-    return
 
 
 if __name__ == '__main__':
@@ -102,6 +83,3 @@ if __name__ == '__main__':
 
     num_params = sum(p.numel() for p in model.parameters())
     print('Number of params:', num_params)
-
-    save_fsc384_results(args, model, f'exps/{EXP_NAME}/val_{PTH_NAME}')
-

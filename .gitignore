@@ -1,5 +1,6 @@
 pretrained
 datasets
+modules/clip/bpe_simple_vocab_16e6.txt.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
