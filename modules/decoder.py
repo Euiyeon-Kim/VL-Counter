@@ -21,7 +21,6 @@ class DensityX16(nn.Module):
             nn.PReLU(32),
             nn.UpsamplingBilinear2d(scale_factor=2),
             nn.Conv2d(32, 1, 1),
-            nn.ReLU(32)
         )
         self._weight_init_()
 
@@ -36,7 +35,8 @@ class DensityX16(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
-        return self.regressor(x)
+        pred = self.regressor(x)
+        return torch.clamp(pred, min=0)
 
 
 class CNNDecoderwCNNFeat(nn.Module):
