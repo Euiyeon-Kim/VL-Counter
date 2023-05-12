@@ -110,7 +110,7 @@ class CLIPCorrCNNv2(BaseModel):
             nn.GELU(),
             nn.Linear(args.txt_emb_dim, args.txt_emb_dim),
         )
-        self.decoder = CNNDecoderwCNNFeat(in_dim=1)
+        self.decoder = CNNDecoderwCNNFeat(in_dim=args.txt_emb_dim)
         self.mse_loss = nn.MSELoss(reduction='mean')
 
     def get_log_dict(self):

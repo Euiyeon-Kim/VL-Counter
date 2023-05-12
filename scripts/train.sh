@@ -1,5 +1,5 @@
 NUM_GPUS=1
-CHECKPOINT_DIR=debug
+CHECKPOINT_DIR=CLIPCorrCNN/openCLIP_allNorm_CNNFeat_noReLU
 CONFIG_NAME=debug.yaml
 
 mkdir -p exps/${CHECKPOINT_DIR} && \
