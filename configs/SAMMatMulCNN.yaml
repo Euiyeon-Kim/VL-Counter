@@ -1,0 +1,30 @@
+seed: 806
+
+model: SAMMatMulCNN
+
+# Data
+density_scale: 60
+data_name: FSC147
+data_root: datasets/FSC147_384_V2
+img_norm_mean:
+  - 0.48145466
+  - 0.4578275
+  - 0.40821073
+img_norm_var:
+  - 0.26862954
+  - 0.26130258
+  - 0.27577711
+
+# Optimizer
+weight_decay: 1.0e-4
+backbone_lr: 1.0e-6
+start_lr: 1.0e-4
+end_lr: 1.0e-5
+warm_up_iter: 300
+last_lr_decay_iter: 40000
+
+# Logging
+img_summary_freq: 100
+metric_summary_freq: 50
+save_latest_freq: 500
+save_every_freq_epoch: 25

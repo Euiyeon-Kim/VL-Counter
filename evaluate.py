@@ -6,6 +6,7 @@ from PIL import Image
 from tqdm import tqdm
 
 import torch
+import torch.nn.functional as F
 from torchvision import transforms
 from torch.utils.data import DataLoader
 
@@ -95,23 +96,37 @@ def test_prompt(args, model, img_path, test_classes, save_dir):
     ])
     inp_img = img_transform(resized_image).unsqueeze(0).to(DEVICE)
     visualize = []
+
     for class_name in test_classes:
         pred = model.inference(inp_img, [class_name], set_img_dict=True)
         pred_cnt = torch.sum(pred) / args.density_scale
-        viz = scale_and_get_colormap(pred[0].permute(1, 2, 0).cpu().numpy())
-        cv2.putText(viz, class_name, (10, 30), cv2.FONT_HERSHEY_PLAIN, 2.0, (255, 255, 255), 2)
-        cv2.putText(viz, f"{pred_cnt:.5f}", (10, 512 - 15), cv2.FONT_HERSHEY_PLAIN, 2.0, (255, 255, 255), 1)
+        viz_density = scale_and_get_colormap(pred[0].permute(1, 2, 0).cpu().numpy())
+        cv2.putText(viz_density, class_name, (10, 30), cv2.FONT_HERSHEY_PLAIN, 2.0, (255, 255, 255), 2)
+        cv2.putText(viz_density, f"{pred_cnt:.5f}", (10, 512 - 15), cv2.FONT_HERSHEY_PLAIN, 2.0, (255, 255, 255), 1)
+
+        log_img_dict = model.img_dict
+        sim = F.interpolate(log_img_dict['sim'].unsqueeze(1), size=(512, 512), mode='nearest')[0] \
+            .permute(1, 2, 0).cpu().numpy()
+        viz_sim = scale_and_get_colormap(sim)
+
+        origin_sim = F.interpolate(log_img_dict['origin_sim'].unsqueeze(1), size=(512, 512), mode='nearest')[0] \
+            .permute(1, 2, 0).cpu().numpy()
+        viz_origin_sim = scale_and_get_colormap(sim)
+
+        viz = np.hstack((viz_density, viz_origin_sim, viz_sim))
         visualize.append(viz)
 
-    viz = np.hstack((visualize)).astype(np.uint8)
+    viz = np.vstack((visualize)).astype(np.uint8)
     viz = cv2.cvtColor(viz, cv2.COLOR_RGB2BGR)
     img_name = img_path.split("/")[-1]
-    Image.fromarray(np.hstack((resized_image, viz))).save(f"{save_dir}/{img_name}")
+    img_line = np.zeros((args.input_resolution*3, args.input_resolution, 3)).astype(np.uint8)
+    img_line[:args.input_resolution, :args.input_resolution, :] = resized_image
+    Image.fromarray(np.hstack((img_line, viz))).save(f"{save_dir}/{img_name}")
 
 
 if __name__ == '__main__':
     PTH_NAME = 'best_mae'
-    EXP_NAME = 'CLIPMatMulCNN/openCLIP_allNorm_ViTFeat_noReLU_simce01'
+    EXP_NAME = 'CLIPCorrCNN/openCLIP_allNorm_CNNFeat_noReLU'
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     import yaml

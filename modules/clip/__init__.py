@@ -110,7 +110,6 @@ def embed_classname(txt_embedder, classnames):
     return torch.stack(embeddings, dim=0)
 
 
-
 def build_txt_encoder(args):
     clip_txt_encoder = CLIPTextEncoder(pretrained=args.clip_path)
     added_weight = clip_txt_encoder.init_weights()
