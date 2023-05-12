@@ -74,7 +74,7 @@ class FSC147(Dataset):
         resized_image = TTensor(resized_image)
         if self.mode != 'train':
             resized_density = resized_density * self.density_scale
-            return resized_image, resized_density, new_count
+            return resized_image, resized_density, orig_count
 
         # Augmentation probability
         aug_p = random.random()
@@ -106,7 +106,7 @@ class FSC147(Dataset):
 
         # Density map scale up
         resized_density = resized_density * self.density_scale
-        return resized_image, resized_density, new_count
+        return resized_image, resized_density, orig_count
 
     def __getitem__(self, item):
         cur_class, img_file_name = self.datas[item]
