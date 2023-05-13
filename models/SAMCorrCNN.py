@@ -84,5 +84,5 @@ class SAMCorrCNNv1(BaseModel):
             self.img_dict['class_name'] = inp_dict['class_name'][0]
             self.img_dict['gt'] = gt[0]
             self.img_dict['count'] = inp_dict['count'][0]
-
+            
         return total_loss, metric_dict

@@ -13,7 +13,7 @@ patch_size: 16
 
 # Train
 total_epochs: 500
-batch_size: 8
+batch_size: 16
 num_workers: 8
 valid_freq_epoch: 1
 test_freq_epoch: 5
@@ -23,6 +23,7 @@ fix_txt_encoder: True
 fix_img_encoder: True
 
 # Data
+use_cutmix: True
 density_scale: 60
 data_name: FSC147
 data_root: datasets/FSC147_384_V2
@@ -44,7 +45,7 @@ warm_up_iter: 300
 last_lr_decay_iter: 40000
 
 # Logging
-img_summary_freq: 10
-metric_summary_freq: 10
+img_summary_freq: 100
+metric_summary_freq: 50
 save_latest_freq: 500
 save_every_freq_epoch: 25

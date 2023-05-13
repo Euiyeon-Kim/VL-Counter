@@ -1,5 +1,5 @@
 NUM_GPUS=1
-CHECKPOINT_DIR=debug
+CHECKPOINT_DIR=SAMCorrCNN/fixAll_baseline_b16_cutmux
 CONFIG_NAME=debug.yaml
 
 mkdir -p exps/${CHECKPOINT_DIR} && \

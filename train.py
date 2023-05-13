@@ -14,6 +14,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 import data
 import models
+from data.cutmix import CutMixCollator
 from utils.logger import Logger
 from utils.scheduler import get_lr
 from utils.env import get_options, prepare_env
@@ -115,19 +116,19 @@ def train(args, trainer):
         step = 0
         epoch = 0
         best_mae = math.inf
-        # Todo: Implement resume
-
+        
+        collate = CutMixCollator() if args.use_cutmix else None
         train_dataset = getattr(data, f'{args.data_name}')(args, mode='train')
         train_sampler = DistributedSampler(train_dataset)
         train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
-                                      pin_memory=True, drop_last=True, sampler=train_sampler)
+                                      collate_fn=collate, pin_memory=True, drop_last=True, sampler=train_sampler)
 
         time_stamp = time.time()
         for cur_epoch in range(epoch, args.total_epochs):
             train_sampler.set_epoch(cur_epoch)
 
             trainer.train()
-            for batch in train_dataloader:
+            for batch in iter(train_dataloader):
                 data_time_interval = time.time() - time_stamp
                 time_stamp = time.time()
 
