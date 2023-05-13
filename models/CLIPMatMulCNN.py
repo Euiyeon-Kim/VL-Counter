@@ -14,7 +14,6 @@ class CLIPMatMulCNNv1(BaseModel):
     """
     def __init__(self, args):
         super(CLIPMatMulCNNv1, self).__init__(args=args)
-        self.do_norm = args.do_norm
 
         self.txt_backbone = build_txt_encoder(args)
         self.img_backbone = build_img_encoder(args)
@@ -47,11 +46,6 @@ class CLIPMatMulCNNv1(BaseModel):
         B, _, H, W = imgs.size()
         npH, npW = H // self.args.patch_size, W // self.args.patch_size
         cls_token, features = self.img_backbone(imgs)[-1]   # [B, 1, 512], [B, 1024, 512]
-
-        if self.do_norm:
-            features = features / features.norm(dim=1, keepdim=True)
-            txt_embeddings = txt_embeddings / txt_embeddings.norm(dim=1, keepdim=True)
-            cls_token = cls_token / cls_token.norm(dim=1, keepdim=True)
 
         origin_sim = torch.matmul(features, txt_embeddings.unsqueeze(-1)).reshape(B, npH, npW, 1).permute(0, 3, 1, 2)
 
@@ -115,7 +109,6 @@ class CLIPMatMulCNNv2(BaseModel):
     """
     def __init__(self, args):
         super(CLIPMatMulCNNv2, self).__init__(args=args)
-        self.do_norm = args.do_norm
 
         self.txt_backbone = build_txt_encoder(args)
         self.img_backbone = build_img_encoder(args)
@@ -147,11 +140,6 @@ class CLIPMatMulCNNv2(BaseModel):
         B, _, H, W = imgs.size()
         npH, npW = H // self.args.patch_size, W // self.args.patch_size
         cls_token, features = self.img_backbone(imgs)[-1]   # [B, 1, 512], [B, 1024, 512]
-
-        if self.do_norm:
-            features = features / features.norm(dim=1, keepdim=True)
-            txt_embeddings = txt_embeddings / txt_embeddings.norm(dim=1, keepdim=True)
-            cls_token = cls_token / cls_token.norm(dim=1, keepdim=True)
 
         origin_sim = torch.matmul(features, txt_embeddings.unsqueeze(-1)).reshape(B, npH, npW, 1).permute(0, 3, 1, 2)
 

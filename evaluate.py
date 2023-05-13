@@ -111,7 +111,7 @@ def test_prompt(args, model, img_path, test_classes, save_dir):
 
         origin_sim = F.interpolate(log_img_dict['origin_sim'].unsqueeze(1), size=(512, 512), mode='nearest')[0] \
             .permute(1, 2, 0).cpu().numpy()
-        viz_origin_sim = scale_and_get_colormap(sim)
+        viz_origin_sim = scale_and_get_colormap(origin_sim)
 
         viz = np.hstack((viz_density, viz_origin_sim, viz_sim))
         visualize.append(viz)
@@ -119,14 +119,14 @@ def test_prompt(args, model, img_path, test_classes, save_dir):
     viz = np.vstack((visualize)).astype(np.uint8)
     viz = cv2.cvtColor(viz, cv2.COLOR_RGB2BGR)
     img_name = img_path.split("/")[-1]
-    img_line = np.zeros((args.input_resolution*3, args.input_resolution, 3)).astype(np.uint8)
+    img_line = np.zeros((args.input_resolution*len(test_classes), args.input_resolution, 3)).astype(np.uint8)
     img_line[:args.input_resolution, :args.input_resolution, :] = resized_image
     Image.fromarray(np.hstack((img_line, viz))).save(f"{save_dir}/{img_name}")
 
 
 if __name__ == '__main__':
     PTH_NAME = 'best_mae'
-    EXP_NAME = 'CLIPCorrCNN/openCLIP_allNorm_CNNFeat_noReLU'
+    EXP_NAME = 'CLIPCorrCNN/fixCLIP_allNorm_CNNFeat_noReLU'
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     import yaml
@@ -147,15 +147,16 @@ if __name__ == '__main__':
     ckpt_path = f"exps/{EXP_NAME}/{PTH_NAME}.pth"
     ckpt = torch.load(ckpt_path)['model']
     model.load_state_dict(ckpt, strict=True)
-
+    
     for param in model.parameters():
         param.requires_grad = False
 
     num_params = sum(p.numel() for p in model.parameters())
     print('Number of params:', num_params)
-
-    IMG_PATH = 'datasets/FSC147_384_V2/images_384_VarV2/343.jpg'
-    CLASSES = ['kiwis', 'strawberries', 'cars']
+    
+    # IMG_PATH = 'datasets/FSC147_384_V2/images_384_VarV2/343.jpg'
+    IMG_PATH = 'banana_nuts.jpeg'
+    CLASSES = ['nut', 'nuts', 'banana', 'bananas']
     test_prompt(args, model, IMG_PATH, CLASSES, save_dir=f"exps/{EXP_NAME}/testing")
     # validate_fsc384(args, model, batch_size=8)
     # test_fsc384(args, model, batch_size=8)

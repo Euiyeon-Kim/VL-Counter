@@ -1,7 +1,6 @@
 seed: 806
 
 model: CLIPCorrCNNv2
-do_norm: True
 
 # Loss
 simmap_ce_lambda: 0.1
@@ -19,7 +18,7 @@ drop_path_rate: 0.1
 
 # Train
 total_epochs: 500
-batch_size: 8
+batch_size: 16
 num_workers: 8
 valid_freq_epoch: 1
 
