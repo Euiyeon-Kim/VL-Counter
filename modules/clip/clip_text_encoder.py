@@ -50,7 +50,7 @@ class CLIPTextEncoder(nn.Module):
 
             u, w = self.load_state_dict(state_dict, False)
             self.added_weight_names = u
-            print(u, w, 'are misaligned params in text encoder')
+            print(u, w, 'are misaligned params in CLIP text encoder')
             return u
 
     def build_attention_mask(self):

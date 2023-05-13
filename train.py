@@ -17,7 +17,7 @@ import models
 from utils.logger import Logger
 from utils.scheduler import get_lr
 from utils.env import get_options, prepare_env
-from evaluate import validate_fsc384
+from evaluate import validate_fsc384, test_fsc384
 
 
 class Trainer:
@@ -40,6 +40,7 @@ class Trainer:
                     pretrained_backbone_weight.append(p)
                 else:
                     added_backbone_weight.append(p)
+            print(f"Added weight in backbone: {len(added_backbone_weight)}")
             self.optimizer = optim.AdamW([
                 {"params": pretrained_backbone_weight, "lr": args.backbone_lr},
                 {"params": added_backbone_weight},
@@ -75,6 +76,10 @@ class Trainer:
     @torch.no_grad()    
     def validate_fsc384(self, set_img_dict=True):
         return validate_fsc384(self.args, self.model_without_ddp, return_visual=set_img_dict)
+
+    @torch.no_grad()    
+    def test_fsc384(self, set_img_dict=True):
+        return test_fsc384(self.args, self.model_without_ddp, return_visual=set_img_dict)
 
     def save_model(self, path, epoch, step, best, save_optim=False):
         chkpt = {
@@ -135,7 +140,7 @@ def train(args, trainer):
                 train_time_interval = time.time() - time_stamp
 
                 step += 1
-
+            
                 if local_rank == 0:
                     metrics.update({
                         'lr': cur_lr,
@@ -153,11 +158,11 @@ def train(args, trainer):
                     if step % args.save_latest_freq == 0:
                         path = os.path.join(args.log_dir, 'latest.pth')
                         trainer.save_model(path, cur_epoch, step, best_mae, save_optim=True)
-
+                
             if local_rank == 0:
                 print(f"Training epoch {cur_epoch} Done")
                 if (cur_epoch + 1) % args.valid_freq_epoch == 0:
-                    val_results, img_dict = trainer.validate_fsc384(set_img_dict=True)
+                    val_results, val_img_dict = trainer.validate_fsc384(set_img_dict=True)
 
                     cur_mae = val_results['val/fsc_mae']
                     if cur_mae < best_mae:
@@ -166,8 +171,13 @@ def train(args, trainer):
                         trainer.save_model(path, (cur_epoch + 1), step, best_mae, save_optim=False)
 
                     logger.write_dict(val_results, step=cur_epoch + 1)
-                    logger.add_image_summary(img_dict, step=cur_epoch + 1)
+                    logger.add_image_summary(val_img_dict, step=cur_epoch + 1)
                     print(f"Epoch {cur_epoch} Validation Done - Best: {best_mae:.3f}")
+
+                if (cur_epoch + 1) % args.test_freq_epoch == 0:
+                    test_results, test_img_dict = trainer.test_fsc384(set_img_dict=True)
+                    logger.write_dict(test_results, step=cur_epoch + 1)
+                    logger.add_image_summary(test_img_dict, step=cur_epoch + 1)
 
                 if (cur_epoch + 1) % args.save_every_freq_epoch == 0:
                     path = os.path.join(args.log_dir, f'epoch_{cur_epoch + 1:03d}.pth')

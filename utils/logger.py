@@ -32,9 +32,7 @@ class Logger:
     def write_dict(self, results, step=None):
         log_step = step if step is not None else self.total_steps
         for key in results:
-            tag = key.split('_')[0]
-            tag = tag + '/' + key
-            self.summary_writer.add_scalar(tag, results[key], log_step)
+            self.summary_writer.add_scalar(key, results[key], log_step)
         self.summary_writer.flush()
 
     def close(self):

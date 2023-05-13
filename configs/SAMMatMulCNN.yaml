@@ -7,13 +7,13 @@ density_scale: 60
 data_name: FSC147
 data_root: datasets/FSC147_384_V2
 img_norm_mean:
-  - 0.48145466
-  - 0.4578275
-  - 0.40821073
+  - 0.485
+  - 0.456
+  - 0.406
 img_norm_var:
-  - 0.26862954
-  - 0.26130258
-  - 0.27577711
+  - 0.229
+  - 0.224
+  - 0.225
 
 # Optimizer
 weight_decay: 1.0e-4

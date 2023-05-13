@@ -1,19 +1,22 @@
 seed: 806
 
-model: SAMCorrCNNv1
+model: CLIPCorrCNNv2
 
 
-# Backbone - SAM arch
+# Backbone - CLIP arch
 clip_path: pretrained/ViT-B-16.pt
-sam_path: pretrained/sam_vit_b.pth
-txt_emb_dim: 512         # CLIP Text
+# CLIP Text
+txt_emb_dim: 512
+# CLIP Vision
+out_indices: null
 input_resolution: 512
-img_emb_dim: 768
 patch_size: 16
+img_emb_dim: 768
+drop_path_rate: 0.1
 
 # Train
 total_epochs: 500
-batch_size: 8
+batch_size: 4
 num_workers: 8
 valid_freq_epoch: 1
 test_freq_epoch: 5
@@ -27,13 +30,13 @@ density_scale: 60
 data_name: FSC147
 data_root: datasets/FSC147_384_V2
 img_norm_mean:
-  - 0.485
-  - 0.456
-  - 0.406
+  - 0.48145466
+  - 0.4578275
+  - 0.40821073
 img_norm_var:
-  - 0.229
-  - 0.224
-  - 0.225
+  - 0.26862954
+  - 0.26130258
+  - 0.27577711
 
 # Optimizer
 weight_decay: 1.0e-4
@@ -44,7 +47,8 @@ warm_up_iter: 300
 last_lr_decay_iter: 40000
 
 # Logging
-img_summary_freq: 10
-metric_summary_freq: 10
+img_summary_freq: 100
+metric_summary_freq: 50
 save_latest_freq: 500
 save_every_freq_epoch: 25
+

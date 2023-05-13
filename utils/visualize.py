@@ -26,9 +26,10 @@ def save_density_map_w_similarity(denormed_img, pred_density, similarity, origin
         .permute(1, 2, 0).detach().cpu().numpy()
     viz_sim = scale_and_get_colormap(sim)
 
-    origin_sim = F.interpolate(origin_similarity.unsqueeze(1), size=(512, 512), mode='nearest')[0]\
-        .permute(1, 2, 0).detach().cpu().numpy()
-    viz_origin_sim = scale_and_get_colormap(origin_sim)
+    if origin_similarity!=None:
+        origin_sim = F.interpolate(origin_similarity.unsqueeze(1), size=(512, 512), mode='nearest')[0]\
+            .permute(1, 2, 0).detach().cpu().numpy()
+        viz_origin_sim = scale_and_get_colormap(origin_sim)
 
     pred = pred_density.permute(1, 2, 0).detach().cpu().numpy() / density_scale
     pred_cnt = np.sum(pred)
@@ -48,7 +49,10 @@ def save_density_map_w_similarity(denormed_img, pred_density, similarity, origin
     cv2.putText(viz_gt, "GT Count", (0, 25), cv2.FONT_HERSHEY_PLAIN, 2.0, (255, 255, 255), 1)
     cv2.putText(viz_gt, f"{gt_count.item():.5f}", (0, h - 15), cv2.FONT_HERSHEY_PLAIN, 2.0, (255, 255, 255), 1)
 
-    viz = np.hstack((img, viz_pred, viz_origin_sim, viz_sim, viz_gt)).astype(np.uint8)
+    if origin_similarity != None:
+        viz = np.hstack((img, viz_pred, viz_origin_sim, viz_sim, viz_gt)).astype(np.uint8)
+    else:
+        viz = np.hstack((img, viz_pred, viz_sim, viz_gt)).astype(np.uint8)
     viz = cv2.cvtColor(viz, cv2.COLOR_RGB2BGR)
     return viz
 

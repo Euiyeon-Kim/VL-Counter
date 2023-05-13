@@ -8,7 +8,7 @@ def build_img_encoder(args):
     image_encoder = ImageEncoderViT(
         depth=12,
         embed_dim=768,
-        img_size=args.image_size,
+        img_size=args.input_resolution,
         mlp_ratio=4,
         norm_layer=partial(torch.nn.LayerNorm, eps=1e-6),
         num_heads=12,
@@ -17,18 +17,11 @@ def build_img_encoder(args):
         use_rel_pos=True,
         global_attn_indexes=[2, 5, 8, 11],
         window_size=14,
-        out_chans=args.prompt_embed_dim,
+        pretrained=args.sam_path,
     )
+    added_weight = image_encoder.init_weights()
+    if args.fix_img_encoder:
+        for name, p in image_encoder.named_parameters():
+            if name not in added_weight:  # pretrained weight
+                p.requires_grad = False
     return image_encoder
-
-
-if __name__ == '__main__':
-    from dotmap import DotMap
-    args = DotMap({
-        'image_size': 1024,
-        'prompt_embed_dim': 256,
-    })
-
-    print()
-    print(args.prompt_embed_dim)
-    exit()

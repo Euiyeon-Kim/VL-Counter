@@ -94,7 +94,6 @@ class CLIPCorrCNNv2(BaseModel):
     """
     def __init__(self, args):
         super(CLIPCorrCNNv2, self).__init__(args=args)
-
         self.txt_backbone = build_txt_encoder(args)
         self.img_backbone = build_img_encoder(args)
         self.enhancer = nn.Sequential(

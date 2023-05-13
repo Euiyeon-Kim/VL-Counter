@@ -60,7 +60,7 @@ class CLIPVisionEncoder(nn.Module):
 
             u, w = self.load_state_dict(state_dict, False)
             self.added_weight_names = u
-            print(u, w, 'are misaligned params in vision transformer')
+            print(u, w, 'are misaligned params in CLIP vision transformer')
             return u
 
     def forward(self, x: torch.Tensor):

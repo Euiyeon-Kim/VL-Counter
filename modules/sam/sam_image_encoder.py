@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from typing import Optional, Tuple, Type
 
-from .sam_modules import LayerNorm2d, MLPBlock
+from .sam_modules import MLPBlock
 
 
 # This class and its supporting functions below lightly adapted from the ViTDet backbone available at: https://github.com/facebookresearch/detectron2/blob/main/detectron2/modeling/backbone/vit.py # noqa
@@ -24,15 +24,14 @@ class ImageEncoderViT(nn.Module):
         depth: int = 12,
         num_heads: int = 12,
         mlp_ratio: float = 4.0,
-        out_chans: int = 256,
         qkv_bias: bool = True,
         norm_layer: Type[nn.Module] = nn.LayerNorm,
         act_layer: Type[nn.Module] = nn.GELU,
-        use_abs_pos: bool = True,
         use_rel_pos: bool = False,
         rel_pos_zero_init: bool = True,
         window_size: int = 0,
         global_attn_indexes: Tuple[int, ...] = (),
+        pretrained: str=None,
     ) -> None:
         """
         Args:
@@ -46,7 +45,6 @@ class ImageEncoderViT(nn.Module):
             qkv_bias (bool): If True, add a learnable bias to query, key, value.
             norm_layer (nn.Module): Normalization layer.
             act_layer (nn.Module): Activation layer.
-            use_abs_pos (bool): If True, use absolute positional embeddings.
             use_rel_pos (bool): If True, add relative positional embeddings to the attention map.
             rel_pos_zero_init (bool): If True, zero initialize relative positional parameters.
             window_size (int): Window size for window attention blocks.
@@ -54,6 +52,8 @@ class ImageEncoderViT(nn.Module):
         """
         super().__init__()
         self.img_size = img_size
+        self.pretrained = pretrained
+        self.added_weight_names = []
 
         self.patch_embed = PatchEmbed(
             kernel_size=(patch_size, patch_size),
@@ -61,8 +61,6 @@ class ImageEncoderViT(nn.Module):
             in_chans=in_chans,
             embed_dim=embed_dim,
         )
-
-        self.pos_embed: Optional[nn.Parameter] = None
 
         self.blocks = nn.ModuleList()
         for i in range(depth):
@@ -80,42 +78,44 @@ class ImageEncoderViT(nn.Module):
             )
             self.blocks.append(block)
 
-        self.neck = nn.Sequential(
-            nn.Conv2d(
-                embed_dim,
-                out_chans,
-                kernel_size=1,
-                bias=False,
-            ),
-            LayerNorm2d(out_chans),
-            nn.Conv2d(
-                out_chans,
-                out_chans,
-                kernel_size=3,
-                padding=1,
-                bias=False,
-            ),
-            LayerNorm2d(out_chans),
-        )
-
     def init_weights(self, pretrained=None):
         pretrained = pretrained or self.pretrained
+        
         if isinstance(pretrained, str):
-            checkpoint = torch.jit.load(pretrained, map_location='cpu').float().state_dict()
+            with open('pretrained/sam_vit_b.pth', "rb") as f:
+                checkpoint = torch.load(f)
 
             state_dict = {}
 
+            for k in checkpoint.keys():
+            
+                if k.startswith('image_encoder.'):
+                    weight = checkpoint[k]
+                    new_k = k.replace('image_encoder.', '')
+                    
+                    
+                    if 'rel_pos' in new_k:
+                        if self.state_dict()[new_k].shape != weight.shape:
+                            new_dim, _ = self.state_dict()[new_k].shape
+                            new_weigtht = F.interpolate(weight.transpose(0, 1).contiguous().unsqueeze(0), size=(new_dim), mode='linear', align_corners=False)  
+                            new_weigtht = new_weigtht[0].transpose(0, 1).contiguous()
+                            weight = new_weigtht
+                            
+                    state_dict[new_k] = weight
+                        
+            u, w = self.load_state_dict(state_dict, False)
+            self.added_weight_names = u
+            print(u, w, 'are misaligned params in SAM vision transformer')
+            return u
+
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.patch_embed(x)
-        if self.pos_embed is not None:
-            x = x + self.pos_embed
 
         for blk in self.blocks:
             x = blk(x)
 
-        x = self.neck(x.permute(0, 3, 1, 2))
-
-        return x
+        return x.permute(0, 3, 1, 2)
 
 
 class Block(nn.Module):
@@ -149,7 +149,7 @@ class Block(nn.Module):
             input_size (tuple(int, int) or None): Input resolution for calculating the relative
                 positional parameter size.
         """
-        super().__init__()
+        super().__init__()        
         self.norm1 = norm_layer(dim)
         self.attn = Attention(
             dim,

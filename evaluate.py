@@ -38,9 +38,10 @@ def validate_fsc384(args, model, batch_size=8, return_visual=True):
 
     if return_visual:
         log_img_dict = model.img_dict
+        origin_sim = log_img_dict['origin_sim']
         denormed = denormalize(log_img_dict['img'].unsqueeze(0), args.img_norm_mean, args.img_norm_var)
         img = save_density_map_w_similarity(denormed, log_img_dict['pred'], log_img_dict['sim'],
-                                            log_img_dict['origin_sim'], batch['gt'][0], gt_cnt[0],
+                                            origin_sim, batch['gt'][0], gt_cnt[0],
                                             class_name[0], args.density_scale)
         img_dict = {'val/fsc_pred': torch.from_numpy(img).permute(2, 0, 1) / 255.}
 
@@ -54,7 +55,7 @@ def validate_fsc384(args, model, batch_size=8, return_visual=True):
 
 
 @torch.no_grad()
-def test_fsc384(args, model, batch_size=8, return_visual=False):
+def test_fsc384(args, model, batch_size=8, return_visual=True):
     model.eval()
     mae = 0
     rmse = 0
@@ -74,6 +75,15 @@ def test_fsc384(args, model, batch_size=8, return_visual=False):
         cnt_err = abs(pred_cnt - gt_cnt)
         mae += torch.sum(cnt_err).item()
         rmse += torch.sum(cnt_err**2).item()
+        
+    if return_visual:
+        log_img_dict = model.img_dict
+        origin_sim = log_img_dict['origin_sim']
+        denormed = denormalize(log_img_dict['img'].unsqueeze(0), args.img_norm_mean, args.img_norm_var)
+        img = save_density_map_w_similarity(denormed, log_img_dict['pred'], log_img_dict['sim'],
+                                            origin_sim, batch['gt'][0], gt_cnt[0],
+                                            class_name[0], args.density_scale)
+        img_dict = {'test/fsc_pred': torch.from_numpy(img).permute(2, 0, 1) / 255.}
 
     mae = mae / len(test_dataset)
     rmse = (rmse / len(test_dataset)) ** 0.5
