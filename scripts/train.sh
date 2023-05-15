@@ -1,6 +1,6 @@
 NUM_GPUS=1
-CHECKPOINT_DIR=SAMCorrCNN/fixAll_baseline_b16_cutmux_2ce001
-CONFIG_NAME=SAMCorrCNN.yaml
+CHECKPOINT_DIR=CLIPSCorrCNN/fixAll_baseline_b8_cutmux_CorrOrifeat
+CONFIG_NAME=CLIPSCorrCNN.yaml
 
 mkdir -p exps/${CHECKPOINT_DIR} && \
 python -m torch.distributed.launch --use_env \

@@ -3,15 +3,16 @@ from pkg_resources import packaging
 
 import torch
 
-from .clip_text_encoder import CLIPTextEncoder
-from .clip_image_encoder import CLIPVisionEncoder
-from .simple_tokenizer import SimpleTokenizer as _Tokenizer
+from modules.clip.clip_text_encoder import CLIPTextEncoder
+from modules.clip.clip_image_encoder import CLIPVisionEncoder
+from modules.clip.clip_surgery_image_encoder import CLIPSurgeryVisionEncoder
+from modules.clip.simple_tokenizer import SimpleTokenizer as _Tokenizer
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 _tokenizer = _Tokenizer()
 
-PROMPTS = [
+PROMPT_TEMPLATES = [
     'a photo of a {}.',
     'a photo of a small {}.',
     'a photo of a medium {}.',
@@ -102,7 +103,7 @@ def tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate: b
 def embed_classname(txt_embedder, classnames):
     embeddings = []
     for classname in classnames:
-        sentences = [prompt.format(classname) for prompt in PROMPTS]
+        sentences = [template.format(classname) for template in PROMPT_TEMPLATES]
         tokenized = tokenize(sentences).to(DEVICE)
         embedded = txt_embedder(tokenized)
         embedded = torch.mean(embedded, dim=0)
@@ -132,4 +133,87 @@ def build_img_encoder(args):
             if name not in added_weight:  # pretrained weight
                 p.requires_grad = False
     return clip_img_encoder
+
+
+def build_s_img_encoder(args):
+    clip_s_img_encoder = CLIPSurgeryVisionEncoder(
+        input_resolution=args.input_resolution,
+        pretrained=args.clip_path
+    )
+    added_weight = clip_s_img_encoder.init_weights()
+    if args.fix_img_encoder:
+        for name, p in clip_s_img_encoder.named_parameters():
+            if name not in added_weight:  # pretrained weight
+                p.requires_grad = False
+    return clip_s_img_encoder
+
+
+if __name__ == '__main__':
+    import torch
+    from PIL import Image
+    from torchvision import transforms
+    from modules.clip.clip_surgery_image_encoder import CLIPSurgeryVisionEncoder
+
+    RESOLUTION = 512
+    IMAGE = Image.open("../../datasets/FSC147_384_V2/images_384_VarV2/343.jpg").resize((RESOLUTION, RESOLUTION))
+    # IMAGE = Image.open("../../kitti.png").resize((RESOLUTION, RESOLUTION))
+    NUM = RESOLUTION // 16
+    TEXT_CLASSES = ["kiwi", ""]
+    img_transform = transforms.Compose([
+        # transforms.Resize(RESOLUTION, interpolation=transforms.InterpolationMode.BICUBIC),
+        transforms.ToTensor(),
+        transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+    ])
+    SENTENCES = []
+    for txt in TEXT_CLASSES:
+        SENTENCES.append([template.format(txt.lower()) for template in PROMPT_TEMPLATES])
+
+    text_encoder = CLIPTextEncoder(context_length=77, vocab_size=49408, embed_dim=512,
+                                   transformer_width=512, transformer_heads=8, transformer_layers=12)
+    text_encoder.init_weights(pretrained='../../pretrained/ViT-B-16.pt')
+    text_encoder = text_encoder.to(DEVICE)
+
+    img_encoder = CLIPSurgeryVisionEncoder(input_resolution=RESOLUTION, pretrained='../../pretrained/ViT-B-16.pt')
+    img_encoder.init_weights()
+    img_encoder.to(DEVICE)
+
+    with torch.no_grad():
+        embeds = []
+        for s in SENTENCES:
+            txt_tokens = tokenize(s).to(DEVICE)
+            txt_embedded = text_encoder(txt_tokens)
+            txt_embedded = txt_embedded / txt_embedded.norm(dim=-1, keepdim=True)
+            txt_embedded = torch.mean(txt_embedded, dim=0)
+            txt_embedded = txt_embedded / txt_embedded.norm()
+            embeds.append(txt_embedded)
+        txt_embedded = torch.stack(embeds, dim=1).transpose(0, 1).contiguous()
+
+        img = img_transform(IMAGE).to(DEVICE).unsqueeze(0)
+        cls_token, patch_feat = img_encoder(img)
+
+        cls_token = cls_token / cls_token.norm(dim=-1, keepdim=True)
+        patch_feat = patch_feat / patch_feat.norm(dim=-1, keepdim=True)
+        patch_feat = patch_feat.reshape(1, NUM, NUM, 512).permute(0, 3, 1, 2).contiguous()
+
+        import torch.nn.functional as F
+        outputs = []
+        for embed in txt_embedded:
+            output = F.conv2d(patch_feat, embed.unsqueeze(0).unsqueeze(-1).unsqueeze(-1))
+            outputs.append(output)
+        outputs = torch.stack(outputs, dim=1).squeeze(2)
+
+        for i in range(NUM):
+            for j in range(NUM):
+                # img_v = patch_feat[i, j, :].unsqueeze(0)
+                # logits_for_img_v = img_v @ txt_embedded.t()
+                # probs_for_img_v = torch.softmax(logits_for_img_v, dim=-1)
+                probs_for_img_v = torch.softmax(outputs[:, :, i, j], dim=-1)
+                m_idx = torch.argmin(probs_for_img_v, dim=-1)
+                log_txt = f"{TEXT_CLASSES[m_idx.item()]} \t h={i}, w={j} \t "
+                for prob, class_name in zip(probs_for_img_v[0], TEXT_CLASSES):
+                    log_txt = log_txt + f"{class_name}: {prob.item()} \t"
+                print(log_txt)
+
+        normed_cls = cls_token / cls_token.norm(dim=-1, keepdim=True)
+        logits_per_image = normed_cls @ txt_embedded.t()
 

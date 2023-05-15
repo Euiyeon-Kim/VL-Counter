@@ -45,7 +45,7 @@ class Trainer:
             self.optimizer = optim.AdamW([
                 {"params": pretrained_backbone_weight, "lr": args.backbone_lr},
                 {"params": added_backbone_weight},
-                {"params": self.model_without_ddp.enhancer.parameters()},
+                # {"params": self.model_without_ddp.enhancer.parameters()},
                 {"params": self.model_without_ddp.decoder.parameters()}
             ], lr=args.start_lr, weight_decay=args.weight_decay)
 
@@ -70,6 +70,7 @@ class Trainer:
 
         self.optimizer.zero_grad()
         total_loss.backward()
+
         self.optimizer.step()
 
         return log_dict
@@ -196,7 +197,6 @@ if __name__ == "__main__":
     prepare_env(args)
 
     trainer = Trainer(args, args.local_rank)
-
     train(args, trainer)
 
     dist.destroy_process_group()

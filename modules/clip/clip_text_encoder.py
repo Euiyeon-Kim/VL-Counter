@@ -69,7 +69,6 @@ class CLIPTextEncoder(nn.Module):
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x)
         x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
-        # x = self.out_proj(x)
         return x
 
 
