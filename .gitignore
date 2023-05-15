@@ -1,3 +1,5 @@
+*.jpeg
+*.png
 pretrained
 exps
 datasets

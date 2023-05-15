@@ -169,9 +169,10 @@ if __name__ == '__main__':
     num_params = sum(p.numel() for p in model.parameters())
     print('Number of params:', num_params)
     
-    IMG_PATH = 'datasets/FSC147_384_V2/images_384_VarV2/343.jpg'
-    # IMG_PATH = 'banana_nuts.jpeg'
-    CLASSES = ['strawberries', 'kiwis', 'cars']
+    # IMG_PATH = 'datasets/FSC147_384_V2/images_384_VarV2/343.jpg'
+    # CLASSES = ['strawberries', 'kiwis', 'cars']
+    IMG_PATH = 'banana_nuts.jpeg'
+    CLASSES = ['banana', 'nuts']
     test_prompt(args, model, IMG_PATH, CLASSES, save_dir=f"exps/{EXP_NAME}/testing")
     # validate_fsc384(args, model, batch_size=8)
     # test_fsc384(args, model, batch_size=8)

@@ -2,6 +2,7 @@ from collections import defaultdict
 
 import torch
 import torch.nn as nn
+from torchvision import transforms
 
 from .BaseModel import BaseModel
 from modules.decoder import DensityX16
@@ -25,6 +26,10 @@ class SAMCorrCNNv1(BaseModel):
             nn.Conv2d(args.txt_emb_dim, args.txt_emb_dim, kernel_size=3, padding=1, bias=False),
             LayerNorm2d(args.txt_emb_dim),
         )
+        
+        self.density_pos_ce_lambda = args.density_pos_ce_lambda
+        self.density_neg_ce_lambda = args.density_neg_ce_lambda
+        
         self.decoder = DensityX16(in_dim=args.txt_emb_dim)
         self.mse_loss = nn.MSELoss(reduction='mean')
 
@@ -53,8 +58,8 @@ class SAMCorrCNNv1(BaseModel):
         
         corr = torch.mul(txt_embeddings.unsqueeze(1), align_features)
         corr = corr.reshape(B, npH, npW, -1).permute(0, 3, 1, 2)
-        pred_density = self.decoder(corr)
-        
+        pred_density = torch.clamp(self.decoder(corr), max=1)
+
         # Save intermediate results for logging
         if set_img_dict:
             similarity = torch.sum(corr, dim=1, keepdim=True)
@@ -74,6 +79,22 @@ class SAMCorrCNNv1(BaseModel):
 
         l2_density_loss = self.mse_loss(gt, pred_density_map)
         total_loss = l2_density_loss
+
+        if self.density_neg_ce_lambda:
+            background_mask = (transforms.GaussianBlur((7, 7), sigma=(2.0, 2.0))(gt) == 0)
+            density_neg_ce_loss = -torch.mean(torch.sum(torch.log(1 - pred_density_map + 1e-9) * background_mask,
+                                                        dim=(1, 2, 3)))
+            total_loss = total_loss + density_neg_ce_loss * self.density_neg_ce_lambda
+            metric_dict.update({
+                'density_neg_ce_loss': density_neg_ce_loss.item()
+            })
+
+        if self.density_pos_ce_lambda:
+            density_pos_ce_loss = -torch.mean(torch.sum(torch.log(pred_density_map + 1e-9) * gt, dim=(1, 2, 3)))
+            total_loss = total_loss + density_pos_ce_loss * self.density_pos_ce_lambda
+            metric_dict.update({
+                'density_pos_ce_loss': density_pos_ce_loss.item()
+            })
 
         metric_dict.update({
             'l2_density': l2_density_loss.item(),
