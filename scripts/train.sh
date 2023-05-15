@@ -1,5 +1,5 @@
 NUM_GPUS=1
-CHECKPOINT_DIR=CLIPSCorrCNN/fixAll_baseline_b8_cutmux_CorrOrifeat
+CHECKPOINT_DIR=CLIPSCorrCNN/fixAll_normAll_baseline_b8_cutmux_CorrOrifeat
 CONFIG_NAME=CLIPSCorrCNN.yaml
 
 mkdir -p exps/${CHECKPOINT_DIR} && \
