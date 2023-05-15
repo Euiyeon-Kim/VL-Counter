@@ -26,7 +26,8 @@ class SAMCorrCNNv1(BaseModel):
             nn.Conv2d(args.txt_emb_dim, args.txt_emb_dim, kernel_size=3, padding=1, bias=False),
             LayerNorm2d(args.txt_emb_dim),
         )
-        
+
+        self.l2_lambda = args.l2_lambda
         self.density_pos_ce_lambda = args.density_pos_ce_lambda
         self.density_neg_ce_lambda = args.density_neg_ce_lambda
         
@@ -78,7 +79,7 @@ class SAMCorrCNNv1(BaseModel):
         gt = inp_dict['gt']
 
         l2_density_loss = self.mse_loss(gt, pred_density_map)
-        total_loss = l2_density_loss
+        total_loss = l2_density_loss * self.l2_lambda
 
         if self.density_neg_ce_lambda:
             background_mask = (transforms.GaussianBlur((7, 7), sigma=(2.0, 2.0))(gt) == 0)

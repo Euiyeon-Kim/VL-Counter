@@ -2,6 +2,7 @@ seed: 806
 
 model: SAMCorrCNNv1
 
+l2_lambda: 100
 density_pos_ce_lambda: 0.01
 density_neg_ce_lambda: 0.01
 
@@ -15,7 +16,7 @@ patch_size: 16
 
 # Train
 total_epochs: 500
-batch_size: 4
+batch_size: 16
 num_workers: 8
 valid_freq_epoch: 1
 test_freq_epoch: 5
