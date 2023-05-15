@@ -17,12 +17,14 @@ total_epochs: 500
 batch_size: 8
 num_workers: 8
 valid_freq_epoch: 1
+test_freq_epoch: 5
 
 # Backbone - train
 fix_txt_encoder: True
 fix_img_encoder: True
 
 # Data
+use_cutmix: True
 density_scale: 60
 data_name: FSC147
 data_root: datasets/FSC147_384_V2
