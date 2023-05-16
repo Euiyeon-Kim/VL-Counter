@@ -141,7 +141,7 @@ def test_prompt(args, model, img_path, test_classes, save_dir):
 
 if __name__ == '__main__':
     PTH_NAME = 'best_mae'
-    EXP_NAME = 'SAMCorrCNN/fixAll_baseline_b16'
+    EXP_NAME = 'CLIPSCorrCNN/fixAll_normAll_baseline_b8_cutmux_CorrOrifeat'
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     import yaml
@@ -161,7 +161,7 @@ if __name__ == '__main__':
     # Load weights
     ckpt_path = f"exps/{EXP_NAME}/{PTH_NAME}.pth"
     ckpt = torch.load(ckpt_path)['model']
-    model.load_state_dict(ckpt, strict=True)
+    model.load_state_dict(ckpt, strict=False)
     
     for param in model.parameters():
         param.requires_grad = False
@@ -169,10 +169,10 @@ if __name__ == '__main__':
     num_params = sum(p.numel() for p in model.parameters())
     print('Number of params:', num_params)
     
-    # IMG_PATH = 'datasets/FSC147_384_V2/images_384_VarV2/343.jpg'
-    # CLASSES = ['strawberries', 'kiwis', 'cars']
-    IMG_PATH = 'banana_nuts.jpeg'
-    CLASSES = ['banana', 'nuts']
+    IMG_PATH = 'datasets/FSC147_384_V2/images_384_VarV2/343.jpg'
+    CLASSES = ['strawberries', 'blueberries', 'kiwis']
+    # IMG_PATH = 'banana_nuts.jpeg'
+    # CLASSES = ['banana', 'nuts']
     test_prompt(args, model, IMG_PATH, CLASSES, save_dir=f"exps/{EXP_NAME}/testing")
     # validate_fsc384(args, model, batch_size=8)
     # test_fsc384(args, model, batch_size=8)

@@ -1,6 +1,6 @@
 seed: 806
 
-model: CLIPSCorrCNNv1
+model: CLIPSCorrCNNv2
 
 # Backbone - CLIP arch
 clip_path: pretrained/ViT-B-16.pt
@@ -40,10 +40,10 @@ img_norm_var:
 # Optimizer
 weight_decay: 1.0e-4
 backbone_lr: 1.0e-6
-start_lr: 1.0e-5
-end_lr: 2.0e-5
+start_lr: 1.0e-4
+end_lr: 1.0e-5
 warm_up_iter: 1000
-last_lr_decay_iter: 20000
+last_lr_decay_iter: 50000
 
 # Logging
 img_summary_freq: 100
