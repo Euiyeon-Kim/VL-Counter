@@ -181,11 +181,7 @@ class CLIPSurgeryVisionEncoder(nn.Module):
             u, w = self.load_state_dict(state_dict, False)
             self.added_weight_names = u
             print(u, w, 'are misaligned params in CLIP vision transformer')
-            return u
 
-    def forward(self, x: torch.Tensor):
-        # reform the architecture during first inference
-        if self.attn == None:
             # apply architecture surgery on the last 6 blocks
             for i in range(1, 7):  # surgery 7, maskclip 2
                 self.attn = Attention(self.embed_dim, self.embed_dim, self.num_heads, True)
@@ -195,6 +191,9 @@ class CLIPSurgeryVisionEncoder(nn.Module):
                 self.attn.proj.bias.data = self.transformer.resblocks[-i].attn.out_proj.bias.clone()
                 self.transformer.resblocks[-i].attn = self.attn
 
+            return u
+
+    def forward(self, x: torch.Tensor):
         x = self.conv1(x)                           # (B, width, grid_h, grid_w)
         B, C, H, W = x.shape
         x = x.reshape(x.shape[0], x.shape[1], -1)   # (B, width, grid_h * grid_w)
@@ -222,7 +221,7 @@ class CLIPSurgeryVisionEncoder(nn.Module):
         x_ori = x_ori.permute(1, 0, 2)
         x_ori = self.ln_post(x_ori)
         x_ori = x_ori @ self.proj
-        x_ori = x_ori[:, 1:].reshape(B, H, W, -1).permute(0, 3, 1, 2)  # B C H W
+        x_ori = x_ori[:, 1:]            # .reshape(B, H, W, -1).permute(0, 3, 1, 2)  # B C H W
 
         global_embedding = x[:, 0]
         visual_embedding = x[:, 1:]     # .reshape(B, H, W, -1).permute(0, 3, 1, 2)  # B C H W

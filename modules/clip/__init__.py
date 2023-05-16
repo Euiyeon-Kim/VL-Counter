@@ -186,7 +186,7 @@ if __name__ == '__main__':
             txt_embedded = torch.mean(txt_embedded, dim=0)
             txt_embedded = txt_embedded / txt_embedded.norm()
             embeds.append(txt_embedded)
-        txt_embedded = torch.stack(embeds, dim=1).transpose(0, 1).contiguous()
+        txt_embedded = embed_classname(text_encoder, TEXT_CLASSES)
 
         img = img_transform(IMAGE).to(DEVICE).unsqueeze(0)
         cls_token, patch_feat = img_encoder(img)
