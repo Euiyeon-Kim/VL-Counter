@@ -8,4 +8,4 @@ python -m torch.distributed.launch --use_env \
 train.py \
 --exp_name ${CHECKPOINT_DIR} \
 --config configs/${CONFIG_NAME} \
-2>&1 | tee -a exps/${CHECKPOINT_DIR}/train.log
+2>&1 | tee -a exps/${CHECKtPOINT_DIR}/train.log

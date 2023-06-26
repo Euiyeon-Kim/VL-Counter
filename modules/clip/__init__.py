@@ -158,7 +158,7 @@ if __name__ == '__main__':
     IMAGE = Image.open("../../datasets/FSC147_384_V2/images_384_VarV2/343.jpg").resize((RESOLUTION, RESOLUTION))
     # IMAGE = Image.open("../../kitti.png").resize((RESOLUTION, RESOLUTION))
     NUM = RESOLUTION // 16
-    TEXT_CLASSES = ["kiwi", ""]
+    TEXT_CLASSES = ["kiwi", "strawberry", "car", "nothing", "background", "blank"]
     img_transform = transforms.Compose([
         # transforms.Resize(RESOLUTION, interpolation=transforms.InterpolationMode.BICUBIC),
         transforms.ToTensor(),
@@ -178,42 +178,60 @@ if __name__ == '__main__':
     img_encoder.to(DEVICE)
 
     with torch.no_grad():
-        embeds = []
-        for s in SENTENCES:
-            txt_tokens = tokenize(s).to(DEVICE)
-            txt_embedded = text_encoder(txt_tokens)
-            txt_embedded = txt_embedded / txt_embedded.norm(dim=-1, keepdim=True)
-            txt_embedded = torch.mean(txt_embedded, dim=0)
-            txt_embedded = txt_embedded / txt_embedded.norm()
-            embeds.append(txt_embedded)
         txt_embedded = embed_classname(text_encoder, TEXT_CLASSES)
+        txt_embedded = txt_embedded[:3] - torch.mean(txt_embedded[3:], dim=0, keepdim=True)
 
         img = img_transform(IMAGE).to(DEVICE).unsqueeze(0)
-        cls_token, patch_feat = img_encoder(img)
+        cls_token, surg_feat, origin_feat = img_encoder(img)
 
         cls_token = cls_token / cls_token.norm(dim=-1, keepdim=True)
-        patch_feat = patch_feat / patch_feat.norm(dim=-1, keepdim=True)
-        patch_feat = patch_feat.reshape(1, NUM, NUM, 512).permute(0, 3, 1, 2).contiguous()
+        surg_feat = surg_feat / surg_feat.norm(dim=-1, keepdim=True)
+        surg_feat = surg_feat.reshape(1, NUM, NUM, 512).permute(0, 3, 1, 2).contiguous()
+        origin_feat = origin_feat / origin_feat.norm(dim=-1, keepdim=True)
+        origin_feat = origin_feat.reshape(1, NUM, NUM, 512).permute(0, 3, 1, 2).contiguous()
 
+        import cv2
+        import numpy as np
         import torch.nn.functional as F
-        outputs = []
-        for embed in txt_embedded:
-            output = F.conv2d(patch_feat, embed.unsqueeze(0).unsqueeze(-1).unsqueeze(-1))
-            outputs.append(output)
-        outputs = torch.stack(outputs, dim=1).squeeze(2)
+        from utils.visualize import scale_and_get_colormap
 
-        for i in range(NUM):
-            for j in range(NUM):
-                # img_v = patch_feat[i, j, :].unsqueeze(0)
-                # logits_for_img_v = img_v @ txt_embedded.t()
-                # probs_for_img_v = torch.softmax(logits_for_img_v, dim=-1)
-                probs_for_img_v = torch.softmax(outputs[:, :, i, j], dim=-1)
-                m_idx = torch.argmin(probs_for_img_v, dim=-1)
-                log_txt = f"{TEXT_CLASSES[m_idx.item()]} \t h={i}, w={j} \t "
-                for prob, class_name in zip(probs_for_img_v[0], TEXT_CLASSES):
-                    log_txt = log_txt + f"{class_name}: {prob.item()} \t"
-                print(log_txt)
+        surg_vizs = []
+        origin_vizs = []
+        for class_name, embed in zip(TEXT_CLASSES, txt_embedded):
+            surg_output = F.conv2d(surg_feat, embed.unsqueeze(0).unsqueeze(-1).unsqueeze(-1))
+            surg_viz = F.interpolate(surg_output, size=(512, 512), mode='nearest')[0] \
+                .permute(1, 2, 0).cpu().numpy()
+            surg_viz = scale_and_get_colormap(surg_viz)
+            surg_vizs.append(surg_viz)
 
-        normed_cls = cls_token / cls_token.norm(dim=-1, keepdim=True)
-        logits_per_image = normed_cls @ txt_embedded.t()
+            origin_output = F.conv2d(origin_feat, embed.unsqueeze(0).unsqueeze(-1).unsqueeze(-1))
+            origin_viz = F.interpolate(origin_output, size=(512, 512), mode='nearest')[0] \
+                .permute(1, 2, 0).cpu().numpy()
+            origin_viz = scale_and_get_colormap(origin_viz)
+            origin_vizs.append(origin_viz)
+
+        surg_vizs = np.concatenate([cv2.cvtColor(np.array(IMAGE), cv2.COLOR_RGB2BGR)] + surg_vizs, axis=1)
+        surg_vizs = cv2.cvtColor(surg_vizs, cv2.COLOR_RGB2BGR)
+        Image.fromarray(surg_vizs).save("no_red_surg_vizs.png")
+
+        origin_vizs = np.concatenate([cv2.cvtColor(np.array(IMAGE), cv2.COLOR_RGB2BGR)] + origin_vizs, axis=1)
+        origin_vizs = cv2.cvtColor(origin_vizs, cv2.COLOR_RGB2BGR)
+        Image.fromarray(origin_vizs).save("no_red_origin_vizs.png")
+
+
+        # Classification probability for Each patch
+        # for i in range(NUM):
+        #     for j in range(NUM):
+        #         # img_v = patch_feat[i, j, :].unsqueeze(0)
+        #         # logits_for_img_v = img_v @ txt_embedded.t()
+        #         # probs_for_img_v = torch.softmax(logits_for_img_v, dim=-1)
+        #         probs_for_img_v = torch.softmax(outputs[:, :, i, j], dim=-1)
+        #         m_idx = torch.argmin(probs_for_img_v, dim=-1)
+        #         log_txt = f"{TEXT_CLASSES[m_idx.item()]} \t h={i}, w={j} \t "
+        #         for prob, class_name in zip(probs_for_img_v[0], TEXT_CLASSES):
+        #             log_txt = log_txt + f"{class_name}: {prob.item()} \t"
+        #         print(log_txt)
+        #
+        # normed_cls = cls_token / cls_token.norm(dim=-1, keepdim=True)
+        # logits_per_image = normed_cls @ txt_embedded.t()
 
